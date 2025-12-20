@@ -8,39 +8,43 @@ import {
   AlertCircle,
   Bell
 } from 'lucide-react';
-import { DataService } from '../services/dataService';
-import { mockDashboardStats, mockAppointments, mockReminders, mockPatients, mockStaff, mockTreatments } from '../data/mockData';
+import { AdminNotification, Appointment, Reminder } from '../types';
+import { dashboardService, DashboardStats } from '../services/api/dashboardService';
+import { notificationService } from '../services/api/notificationService';
 
 export default function Dashboard() {
-  const [patients, setPatients] = useState(DataService.getPatients());
-  const [appointments, setAppointments] = useState(DataService.getAppointments());
-  const [treatments, setTreatments] = useState(DataService.getTreatments());
-  const [reminders, setReminders] = useState(DataService.getReminders());
-  const [adminNotifications, setAdminNotifications] = useState(DataService.getAdminNotifications());
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialiser les données si nécessaire
-    if (DataService.getPatients().length === 0) {
-      mockPatients.forEach(p => DataService.savePatient(p));
-    }
-    if (DataService.getStaff().length === 0) {
-      mockStaff.forEach(s => DataService.saveStaff(s));
-    }
-    if (DataService.getAppointments().length === 0) {
-      mockAppointments.forEach(a => DataService.saveAppointment(a));
-    }
-    if (DataService.getTreatments().length === 0) {
-      mockTreatments.forEach(t => DataService.saveTreatment(t));
-    }
-    if (DataService.getReminders().length === 0) {
-      mockReminders.forEach(r => DataService.saveReminder(r));
-    }
-    
-    setPatients(DataService.getPatients());
-    setAppointments(DataService.getAppointments());
-    setTreatments(DataService.getTreatments());
-    setReminders(DataService.getReminders());
-    setAdminNotifications(DataService.getAdminNotifications());
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [statsData, upcomingAppointments, pendingReminders, adminNotifs] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getUpcomingAppointments(),
+          dashboardService.getPendingReminders(),
+          notificationService.getAdmin(),
+        ]);
+
+        setStats(statsData);
+        setAppointments(upcomingAppointments as Appointment[]);
+        setReminders(pendingReminders as Reminder[]);
+        setAdminNotifications(adminNotifs);
+      } catch (e) {
+        setError('Erreur lors du chargement du tableau de bord');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
   }, []);
 
   const unreadNotifications = adminNotifications.filter(n => !n.read).length;
@@ -51,45 +55,12 @@ export default function Dashboard() {
   );
   const upcomingReminders = reminders.filter((r) => r.status === 'pending').slice(0, 3);
 
-  // Calculer les statistiques dynamiquement
-  const calculateWeekRevenue = () => {
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    
-    return treatments
-      .filter(t => {
-        const treatDate = new Date(t.date);
-        return treatDate >= weekStart && treatDate <= weekEnd;
-      })
-      .reduce((sum, t) => sum + t.cost, 0);
-  };
-
-  const calculateCompletionRate = () => {
-    const completed = appointments.filter(a => a.status === 'completed').length;
-    const total = appointments.filter(a => a.status !== 'cancelled').length;
-    return total > 0 ? Math.round((completed / total) * 100) : 0;
-  };
-
-  const getAppointmentsByDay = () => {
-    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    return days.map(day => {
-      // Pour simplifier, on utilise les données mockées pour les graphiques
-      // Dans une vraie application, on calculerait à partir des rendez-vous réels
-      return { day, count: mockDashboardStats.appointmentsByDay.find(d => d.day === day)?.count || 0 };
-    });
-  };
-
-  const stats = {
-    totalPatients: patients.length,
-    todayAppointments: todayAppointments.length,
-    weekRevenue: calculateWeekRevenue(),
-    completionRate: calculateCompletionRate(),
-    appointmentsByDay: getAppointmentsByDay(),
-    treatmentTypes: mockDashboardStats.treatmentTypes // On garde les données mockées pour les types de traitements
-  };
+  const currentStats = stats
+    ? {
+        ...stats,
+        todayAppointments: todayAppointments.length,
+      }
+    : null;
 
   return (
     <div>
@@ -99,6 +70,19 @@ export default function Dashboard() {
           Bienvenue, Dr. Benslimane - Aperçu de l'activité du cabinet
         </p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {loading && !currentStats ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Chargement...</p>
+        </div>
+      ) : (
+        <>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
@@ -111,7 +95,7 @@ export default function Dashboard() {
             </span>
           </div>
           <h3 className="text-sm font-medium text-gray-500 mb-1">Total Patients</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.totalPatients}</p>
+          <p className="text-3xl font-bold text-gray-900">{currentStats?.totalPatients ?? 0}</p>
           <p className="text-xs text-gray-600 mt-2">Patients actifs</p>
         </div>
 
@@ -125,7 +109,7 @@ export default function Dashboard() {
             </span>
           </div>
           <h3 className="text-sm font-medium text-gray-500 mb-1">Rendez-vous</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.todayAppointments}</p>
+          <p className="text-3xl font-bold text-gray-900">{currentStats?.todayAppointments ?? 0}</p>
           <p className="text-xs text-gray-600 mt-2">Programmés aujourd'hui</p>
         </div>
 
@@ -140,7 +124,7 @@ export default function Dashboard() {
           </div>
           <h3 className="text-sm font-medium text-gray-500 mb-1">Revenus Semaine</h3>
           <p className="text-3xl font-bold text-gray-900">
-            {stats.weekRevenue.toLocaleString()} DH
+            {(currentStats?.weekRevenue ?? 0).toLocaleString()} DH
           </p>
           <p className="text-xs text-gray-600 mt-2">Cette semaine</p>
         </div>
@@ -155,7 +139,7 @@ export default function Dashboard() {
             </span>
           </div>
           <h3 className="text-sm font-medium text-gray-500 mb-1">Taux de Présence</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.completionRate}%</p>
+          <p className="text-3xl font-bold text-gray-900">{currentStats?.completionRate ?? 0}%</p>
           <p className="text-xs text-gray-600 mt-2">Ce mois-ci</p>
         </div>
       </div>
@@ -166,8 +150,8 @@ export default function Dashboard() {
             Rendez-vous par jour de la semaine
           </h3>
           <div className="space-y-4">
-            {stats.appointmentsByDay.map((item) => {
-              const maxCount = Math.max(...stats.appointmentsByDay.map((d) => d.count));
+            {(currentStats?.appointmentsByDay ?? []).map((item) => {
+              const maxCount = Math.max(...(currentStats?.appointmentsByDay ?? []).map((d) => d.count), 1);
               const percentage = (item.count / maxCount) * 100;
               return (
                 <div key={item.day}>
@@ -190,7 +174,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Types de Traitements</h3>
           <div className="space-y-3">
-            {stats.treatmentTypes.map((item, index) => {
+            {(currentStats?.treatmentTypes ?? []).map((item, index) => {
               const colors = [
                 'bg-blue-100 text-blue-700',
                 'bg-green-100 text-green-700',
@@ -330,8 +314,16 @@ export default function Dashboard() {
                   </div>
                   <button
                     onClick={() => {
-                      DataService.markAdminNotificationAsRead(notification.id);
-                      setAdminNotifications(DataService.getAdminNotifications());
+                      const markRead = async () => {
+                        try {
+                          await notificationService.markAdminAsRead(notification.id);
+                          setAdminNotifications(prev => prev.map(n => (n.id === notification.id ? { ...n, read: true } : n)));
+                        } catch (e) {
+                          // ignore
+                        }
+                      };
+
+                      markRead();
                     }}
                     className="ml-4 text-blue-600 hover:text-blue-700 text-sm"
                   >
@@ -342,6 +334,8 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

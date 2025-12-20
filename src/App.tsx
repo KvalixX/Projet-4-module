@@ -9,18 +9,37 @@ import TreatmentHistory from './components/TreatmentHistory';
 import StaffManagement from './components/StaffManagement';
 import RemindersView from './components/RemindersView';
 import PatientView from './components/PatientView';
+import LandingPage from './components/LandingPage';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [showLanding, setShowLanding] = useState(true);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser) as User;
+        setCurrentUser(parsed);
+        setShowLanding(false);
+      } catch {
+        localStorage.removeItem('currentUser');
+      }
+    }
+  }, []);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setCurrentPage('dashboard');
+    setShowLanding(false);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setShowLanding(true);
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
   };
 
   // Rediriger le personnel administratif s'il essaie d'accéder à des pages non autorisées
@@ -31,8 +50,11 @@ function App() {
     }
   }, [currentUser, currentPage]);
 
-  // Si l'utilisateur n'est pas connecté, afficher la page de login
+  // Si l'utilisateur n'est pas connecté, afficher la landing page puis la page de login
   if (!currentUser) {
+    if (showLanding) {
+      return <LandingPage onEnter={() => setShowLanding(false)} />;
+    }
     return <Login onLogin={handleLogin} />;
   }
 

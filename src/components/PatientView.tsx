@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, FileText, User, LogOut, Plus, Edit2, X, Bell, LayoutDashboard } from 'lucide-react';
 import { User as UserType, Appointment, Treatment, Patient, Notification } from '../types';
-import { DataService } from '../services/dataService';
+import { appointmentService } from '../services/api/appointmentService';
+import { notificationService } from '../services/api/notificationService';
+import { patientService } from '../services/api/patientService';
+import { treatmentService } from '../services/api/treatmentService';
 import PatientForm from './PatientForm';
 import PatientAppointmentForm from './PatientAppointmentForm';
 
@@ -24,176 +27,147 @@ export default function PatientView({ user, onLogout }: PatientViewProps) {
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
-    loadData();
-    // Charger les notifications
-    const patientNotifications = DataService.getNotifications(user.id);
-    setNotifications(patientNotifications);
-    
-    // Vérifier les rappels automatiques
-    checkAutomaticReminders();
-    
+    const loadAll = async () => {
+      await loadData();
+      // Charger les notifications
+      try {
+        const patientNotifications = await notificationService.getAll();
+        setNotifications(patientNotifications);
+      } catch (e) {
+        setNotifications([]);
+      }
+
+      // Vérifier les rappels automatiques
+      checkAutomaticReminders();
+    };
+
+    loadAll();
+
     // Rafraîchir les données toutes les 30 secondes
     const interval = setInterval(() => {
-      loadData();
-      const updatedNotifications = DataService.getNotifications(user.id);
-      setNotifications(updatedNotifications);
+      loadAll();
     }, 30000);
 
     return () => clearInterval(interval);
   }, [user.id, user.patientId]);
 
-  const loadData = () => {
-    if (user.patientId) {
-      const allPatients = DataService.getPatients();
-      const patientData = allPatients.find(p => p.id === user.patientId);
-      setPatient(patientData || null);
+  const loadData = async () => {
+    if (!user.patientId) return;
 
-      const allAppointments = DataService.getAppointments();
-      const patientAppointments = allAppointments.filter(a => a.patientId === user.patientId);
+    try {
+      const patientData = await patientService.getById(user.patientId);
+      setPatient(patientData);
+    } catch (e) {
+      setPatient(null);
+    }
+
+    try {
+      const patientAppointments = await appointmentService.getAll({ patientId: user.patientId });
       setAppointments(patientAppointments);
+    } catch (e) {
+      setAppointments([]);
+    }
 
-      const allTreatments = DataService.getTreatments();
-      const patientTreatments = allTreatments.filter(t => t.patientId === user.patientId);
+    try {
+      const patientTreatments = await treatmentService.getAll(user.patientId);
       setTreatments(patientTreatments);
+    } catch (e) {
+      setTreatments([]);
     }
   };
 
   const checkAutomaticReminders = () => {
     if (!user.patientId) return;
-
-    const upcomingAppointments = appointments.filter(
-      a => a.status === 'scheduled' && new Date(a.date) >= new Date()
-    );
-
-    // Créer des rappels automatiques 24h avant chaque rendez-vous
-    upcomingAppointments.forEach(appointment => {
-      const appointmentDate = new Date(`${appointment.date}T${appointment.time}`);
-      const now = new Date();
-      const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-      // Si le rendez-vous est dans 24-26 heures, créer un rappel
-      if (hoursUntilAppointment >= 24 && hoursUntilAppointment <= 26) {
-        const existingReminder = notifications.find(
-          n => n.type === 'reminder' && n.relatedId === appointment.id
-        );
-
-        if (!existingReminder) {
-          const reminder: Notification = {
-            id: `reminder-${appointment.id}-${Date.now()}`,
-            userId: user.id,
-            type: 'reminder',
-            title: 'Rappel de rendez-vous',
-            message: `Vous avez un rendez-vous demain à ${appointment.time} avec ${appointment.dentistName} pour ${appointment.type}.`,
-            read: false,
-            createdAt: new Date().toISOString(),
-            relatedId: appointment.id
-          };
-          DataService.saveNotification(reminder);
-          setNotifications([...notifications, reminder]);
-        }
-      }
-    });
   };
 
   const handleSavePatient = (patientData: Omit<Patient, 'id' | 'registrationDate'>) => {
     if (patient) {
-      const updatedPatient: Patient = {
-        ...patient,
-        ...patientData
+      const savePatient = async () => {
+        try {
+          const updatedPatient = await patientService.update(patient.id, patientData);
+          setPatient(updatedPatient);
+        } finally {
+          setShowPatientForm(false);
+        }
       };
-      DataService.savePatient(updatedPatient);
-      setPatient(updatedPatient);
-      setShowPatientForm(false);
-      
-      // Notifier le personnel administratif
-      const adminNotification = {
-        id: `admin-notif-${Date.now()}`,
-        type: 'patient_registered' as 'patient_registered',
-        title: 'Modification du profil patient',
-        message: `${patient.firstName} ${patient.lastName} a modifié ses informations personnelles.`,
-        read: false,
-        createdAt: new Date().toISOString(),
-        patientId: patient.id
-      };
-      DataService.saveAdminNotification(adminNotification);
+
+      savePatient();
     }
   };
 
   const handleSaveAppointment = (appointment: Appointment) => {
-    const isNew = !selectedAppointment;
-    DataService.saveAppointment(appointment);
-    loadData();
+    const saveAppointment = async () => {
+      try {
+        if (selectedAppointment) {
+          await appointmentService.update(selectedAppointment.id, {
+            dentistId: appointment.dentistId,
+            date: appointment.date,
+            time: appointment.time,
+            duration: appointment.duration,
+            type: appointment.type,
+            notes: appointment.notes,
+          });
+        } else {
+          await appointmentService.create({
+            patientId: appointment.patientId,
+            dentistId: appointment.dentistId,
+            date: appointment.date,
+            time: appointment.time,
+            duration: appointment.duration,
+            type: appointment.type,
+            notes: appointment.notes,
+          });
+        }
 
-    // Créer une notification pour le patient
-    const notification: Notification = {
-      id: `notif-${Date.now()}`,
-      userId: user.id,
-      type: isNew ? 'appointment_created' : 'appointment_modified',
-      title: isNew ? 'Rendez-vous créé' : 'Rendez-vous modifié',
-      message: isNew
-        ? `Votre rendez-vous avec ${appointment.dentistName} le ${formatDate(appointment.date)} à ${appointment.time} a été créé avec succès.`
-        : `Votre rendez-vous avec ${appointment.dentistName} a été modifié.`,
-      read: false,
-      createdAt: new Date().toISOString(),
-      relatedId: appointment.id
+        await loadData();
+
+        try {
+          const updatedNotifications = await notificationService.getAll();
+          setNotifications(updatedNotifications);
+        } catch (e) {
+          // ignore
+        }
+      } finally {
+        setShowAppointmentForm(false);
+        setSelectedAppointment(undefined);
+      }
     };
-    DataService.saveNotification(notification);
-    setNotifications([...notifications, notification]);
 
-    // Notifier le personnel administratif
-    const adminNotification = {
-      id: `admin-notif-${Date.now()}`,
-      type: (isNew ? 'appointment_created' : 'appointment_modified') as 'appointment_created' | 'appointment_modified',
-      title: isNew ? 'Nouveau rendez-vous créé' : 'Rendez-vous modifié',
-      message: `${patient?.firstName} ${patient?.lastName} a ${isNew ? 'créé' : 'modifié'} un rendez-vous avec ${appointment.dentistName} le ${formatDate(appointment.date)} à ${appointment.time}.`,
-      read: false,
-      createdAt: new Date().toISOString(),
-      relatedId: appointment.id,
-      patientId: user.patientId
-    };
-    DataService.saveAdminNotification(adminNotification);
-
-    setShowAppointmentForm(false);
-    setSelectedAppointment(undefined);
+    saveAppointment();
   };
 
   const handleCancelAppointment = (appointment: Appointment) => {
-    const cancelledAppointment = { ...appointment, status: 'cancelled' as const };
-    DataService.saveAppointment(cancelledAppointment);
-    loadData();
+    const cancelAppointment = async () => {
+      try {
+        await appointmentService.update(appointment.id, { status: 'cancelled' });
+        await loadData();
 
-    // Créer une notification pour le patient
-    const notification: Notification = {
-      id: `notif-${Date.now()}`,
-      userId: user.id,
-      type: 'appointment_cancelled',
-      title: 'Rendez-vous annulé',
-      message: `Votre rendez-vous avec ${appointment.dentistName} le ${formatDate(appointment.date)} à ${appointment.time} a été annulé.`,
-      read: false,
-      createdAt: new Date().toISOString(),
-      relatedId: appointment.id
+        try {
+          const updatedNotifications = await notificationService.getAll();
+          setNotifications(updatedNotifications);
+        } catch (e) {
+          // ignore
+        }
+      } catch (e) {
+        // ignore
+      }
     };
-    DataService.saveNotification(notification);
-    setNotifications([...notifications, notification]);
 
-    // Notifier le personnel administratif
-    const adminNotification = {
-      id: `admin-notif-${Date.now()}`,
-      type: 'appointment_cancelled' as 'appointment_cancelled',
-      title: 'Rendez-vous annulé',
-      message: `${patient?.firstName} ${patient?.lastName} a annulé son rendez-vous avec ${appointment.dentistName} prévu le ${formatDate(appointment.date)} à ${appointment.time}.`,
-      read: false,
-      createdAt: new Date().toISOString(),
-      relatedId: appointment.id,
-      patientId: user.patientId
-    };
-    DataService.saveAdminNotification(adminNotification);
+    cancelAppointment();
   };
 
   const handleMarkNotificationAsRead = (notificationId: string) => {
-    DataService.markNotificationAsRead(notificationId);
-    const updatedNotifications = DataService.getNotifications(user.id);
-    setNotifications(updatedNotifications);
+    const markAsRead = async () => {
+      try {
+        await notificationService.markAsRead(notificationId);
+        const updatedNotifications = await notificationService.getAll();
+        setNotifications(updatedNotifications);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    markAsRead();
   };
 
   const formatDate = (dateString: string) => {

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { Appointment } from '../types';
-import { DataService } from '../services/dataService';
-import { mockAppointments, mockPatients, mockStaff } from '../data/mockData';
+import { appointmentService } from '../services/api/appointmentService';
 import AppointmentForm from './AppointmentForm';
 
 export default function AppointmentCalendar() {
@@ -13,20 +12,24 @@ export default function AppointmentCalendar() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | undefined>();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialiser les données si nécessaire
-    if (DataService.getPatients().length === 0) {
-      mockPatients.forEach(p => DataService.savePatient(p));
-    }
-    if (DataService.getStaff().length === 0) {
-      mockStaff.forEach(s => DataService.saveStaff(s));
-    }
-    if (DataService.getAppointments().length === 0) {
-      mockAppointments.forEach(a => DataService.saveAppointment(a));
-    }
-    
-    setAppointments(DataService.getAppointments());
+    const loadAppointments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await appointmentService.getAll();
+        setAppointments(data);
+      } catch (e) {
+        setError('Erreur lors du chargement des rendez-vous');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAppointments();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -79,10 +82,50 @@ export default function AppointmentCalendar() {
     .slice(0, 5);
 
   const handleSaveAppointment = (appointment: Appointment) => {
-    DataService.saveAppointment(appointment);
-    setAppointments(DataService.getAppointments());
-    setShowForm(false);
-    setSelectedAppointment(undefined);
+    const saveAppointment = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (selectedAppointment) {
+          await appointmentService.update(selectedAppointment.id, {
+            patientId: appointment.patientId,
+            dentistId: appointment.dentistId,
+            date: appointment.date,
+            time: appointment.time,
+            duration: appointment.duration,
+            type: appointment.type,
+            status: appointment.status,
+            notes: appointment.notes,
+          });
+        } else {
+          const created = await appointmentService.create({
+            patientId: appointment.patientId,
+            dentistId: appointment.dentistId,
+            date: appointment.date,
+            time: appointment.time,
+            duration: appointment.duration,
+            type: appointment.type,
+            notes: appointment.notes,
+          });
+
+          if (appointment.status && appointment.status !== 'scheduled') {
+            await appointmentService.update(created.id, { status: appointment.status });
+          }
+        }
+
+        const data = await appointmentService.getAll();
+        setAppointments(data);
+        setShowForm(false);
+        setSelectedAppointment(undefined);
+      } catch (e) {
+        setError('Erreur lors de la sauvegarde du rendez-vous');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    saveAppointment();
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -92,16 +135,41 @@ export default function AppointmentCalendar() {
 
   const handleDeleteAppointment = () => {
     if (!appointmentToDelete) return;
-    DataService.deleteAppointment(appointmentToDelete);
-    setAppointments(DataService.getAppointments());
-    setShowDeleteConfirm(false);
-    setAppointmentToDelete(null);
+    const deleteAppointment = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await appointmentService.delete(appointmentToDelete);
+        const data = await appointmentService.getAll();
+        setAppointments(data);
+        setShowDeleteConfirm(false);
+        setAppointmentToDelete(null);
+      } catch (e) {
+        setError('Erreur lors de la suppression du rendez-vous');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    deleteAppointment();
   };
 
   const handleCancelAppointment = (appointment: Appointment) => {
-    const cancelledAppointment = { ...appointment, status: 'cancelled' as const };
-    DataService.saveAppointment(cancelledAppointment);
-    setAppointments(DataService.getAppointments());
+    const cancelAppointment = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await appointmentService.update(appointment.id, { status: 'cancelled' });
+        const data = await appointmentService.getAll();
+        setAppointments(data);
+      } catch (e) {
+        setError('Erreur lors de l\'annulation du rendez-vous');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cancelAppointment();
   };
 
   const changeDate = (days: number) => {
@@ -137,6 +205,12 @@ export default function AppointmentCalendar() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Gestion des Rendez-vous</h2>
         <p className="text-gray-600">Planifiez et suivez les rendez-vous de vos patients</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -255,7 +329,11 @@ export default function AppointmentCalendar() {
             </div>
 
             <div className="p-4">
-              {todayAppointments.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Chargement...</p>
+                </div>
+              ) : todayAppointments.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="mx-auto text-gray-300 mb-3" size={48} />
                   <p className="text-gray-500">Aucun rendez-vous pour cette date</p>

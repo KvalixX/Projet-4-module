@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Bell, Calendar, Filter, Check, X, AlertCircle, Send } from 'lucide-react';
 import { Reminder } from '../types';
-import { DataService } from '../services/dataService';
-import { mockReminders } from '../data/mockData';
+import { reminderService } from '../services/api/reminderService';
 
 export default function RemindersView() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (DataService.getReminders().length === 0) {
-      mockReminders.forEach(r => DataService.saveReminder(r));
-    }
-    setReminders(DataService.getReminders());
+    const loadReminders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await reminderService.getAll();
+        setReminders(data);
+      } catch (e) {
+        setError('Erreur lors du chargement des rappels');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReminders();
   }, []);
 
   const filteredReminders = reminders.filter((reminder) => {
@@ -23,17 +34,31 @@ export default function RemindersView() {
   });
 
   const handleSendReminder = (reminder: Reminder) => {
-    const updatedReminder = { ...reminder, status: 'sent' as const };
-    DataService.saveReminder(updatedReminder);
-    setReminders(DataService.getReminders());
-    // Dans une vraie application, on enverrait ici une notification par email/SMS
-    alert(`Rappel envoyé à ${reminder.patientName}`);
+    const sendReminder = async () => {
+      try {
+        const updatedReminder = await reminderService.update(reminder.id, { status: 'sent' });
+        setReminders(prev => prev.map(r => (r.id === reminder.id ? updatedReminder : r)));
+        // Dans une vraie application, on enverrait ici une notification par email/SMS
+        alert(`Rappel envoyé à ${reminder.patientName}`);
+      } catch (e) {
+        alert('Erreur lors de l\'envoi du rappel');
+      }
+    };
+
+    sendReminder();
   };
 
   const handleMarkCompleted = (reminder: Reminder) => {
-    const updatedReminder = { ...reminder, status: 'completed' as const };
-    DataService.saveReminder(updatedReminder);
-    setReminders(DataService.getReminders());
+    const markCompleted = async () => {
+      try {
+        const updatedReminder = await reminderService.update(reminder.id, { status: 'completed' });
+        setReminders(prev => prev.map(r => (r.id === reminder.id ? updatedReminder : r)));
+      } catch (e) {
+        alert('Erreur lors de la mise à jour du rappel');
+      }
+    };
+
+    markCompleted();
   };
 
   const getTypeLabel = (type: string) => {
@@ -123,6 +148,12 @@ export default function RemindersView() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Rappels et Notifications</h2>
         <p className="text-gray-600">Gérez les rappels pour vos patients</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -267,7 +298,12 @@ export default function RemindersView() {
         </div>
 
         <div className="p-4">
-          {filteredReminders.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <Bell className="mx-auto text-gray-300 mb-2" size={48} />
+              <p className="text-gray-500">Chargement...</p>
+            </div>
+          ) : filteredReminders.length === 0 ? (
             <div className="text-center py-12">
               <Bell className="mx-auto text-gray-300 mb-2" size={48} />
               <p className="text-gray-500">Aucun rappel trouvé</p>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Calendar, Clock, FileText } from 'lucide-react';
 import { Appointment, Staff } from '../types';
-import { DataService } from '../services/dataService';
+import { appointmentService } from '../services/api/appointmentService';
+import { staffService } from '../services/api/staffService';
 
 interface PatientAppointmentFormProps {
   appointment?: Appointment;
@@ -33,7 +34,7 @@ export default function PatientAppointmentForm({
   selectedDate,
   selectedTime
 }: PatientAppointmentFormProps) {
-  const [staff] = useState<Staff[]>(DataService.getStaff().filter(s => s.role === 'dentist'));
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [formData, setFormData] = useState<Omit<Appointment, 'patientName' | 'dentistName' | 'patientId'>>(
     appointment || {
       id: '',
@@ -47,6 +48,7 @@ export default function PatientAppointmentForm({
     }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (appointment) {
@@ -54,7 +56,23 @@ export default function PatientAppointmentForm({
     }
   }, [appointment]);
 
-  const validateForm = () => {
+  useEffect(() => {
+    const loadDentists = async () => {
+      try {
+        setLoading(true);
+        const allStaff = await staffService.getAll();
+        setStaff(allStaff.filter(s => s.role === 'dentist'));
+      } catch (e) {
+        setStaff([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDentists();
+  }, []);
+
+  const validateForm = async () => {
     const newErrors: Record<string, string> = {};
     
     if (!formData.dentistId) newErrors.dentistId = 'Le dentiste est requis';
@@ -68,27 +86,21 @@ export default function PatientAppointmentForm({
     }
     
     // Vérifier les conflits de rendez-vous
-    const existingAppointments = DataService.getAppointments().filter(
-      a => a.id !== appointment?.id && 
-      a.dentistId === formData.dentistId &&
-      a.date === formData.date &&
-      a.status === 'scheduled'
-    );
-    
-    const selectedTimeMinutes = formData.time.split(':').map(Number);
-    const selectedStart = selectedTimeMinutes[0] * 60 + selectedTimeMinutes[1];
-    const selectedEnd = selectedStart + formData.duration;
-    
-    for (const existing of existingAppointments) {
-      const existingTimeMinutes = existing.time.split(':').map(Number);
-      const existingStart = existingTimeMinutes[0] * 60 + existingTimeMinutes[1];
-      const existingEnd = existingStart + existing.duration;
-      
-      if ((selectedStart >= existingStart && selectedStart < existingEnd) ||
-          (selectedEnd > existingStart && selectedEnd <= existingEnd) ||
-          (selectedStart <= existingStart && selectedEnd >= existingEnd)) {
-        newErrors.time = 'Ce créneau est déjà réservé. Veuillez choisir un autre horaire.';
-        break;
+    if (formData.dentistId && formData.date && formData.time && formData.duration > 0) {
+      try {
+        const conflict = await appointmentService.checkConflicts({
+          dentistId: formData.dentistId,
+          date: formData.date,
+          time: formData.time,
+          duration: formData.duration,
+          appointmentId: appointment?.id,
+        });
+
+        if (conflict.hasConflict) {
+          newErrors.time = 'Ce créneau est déjà réservé. Veuillez choisir un autre horaire.';
+        }
+      } catch (e) {
+        // ignore
       }
     }
     
@@ -98,20 +110,23 @@ export default function PatientAppointmentForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      const selectedDentist = staff.find(s => s.id === formData.dentistId);
-      const patient = DataService.getPatients().find(p => p.id === patientId);
-      
-      const appointmentToSave: Appointment = {
-        ...formData,
-        id: appointment?.id || `apt-${Date.now()}`,
-        patientId: patientId,
-        patientName: patient ? `${patient.firstName} ${patient.lastName}` : '',
-        dentistName: selectedDentist ? `${selectedDentist.firstName} ${selectedDentist.lastName}` : ''
-      };
-      
-      onSave(appointmentToSave);
-    }
+    const submit = async () => {
+      if (await validateForm()) {
+        const selectedDentist = staff.find(s => s.id === formData.dentistId);
+
+        const appointmentToSave: Appointment = {
+          ...formData,
+          id: appointment?.id || `apt-${Date.now()}`,
+          patientId: patientId,
+          patientName: '',
+          dentistName: selectedDentist ? `${selectedDentist.firstName} ${selectedDentist.lastName}` : ''
+        };
+
+        onSave(appointmentToSave);
+      }
+    };
+
+    submit();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -160,6 +175,7 @@ export default function PatientAppointmentForm({
                 </select>
               </div>
               {errors.dentistId && <p className="mt-1 text-sm text-red-600">{errors.dentistId}</p>}
+              {loading && <p className="mt-1 text-sm text-gray-500">Chargement des dentistes...</p>}
             </div>
 
             <div>

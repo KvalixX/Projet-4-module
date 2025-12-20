@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Calendar, DollarSign, User, FileText, Plus } from 'lucide-react';
 import { Treatment, Patient, Staff } from '../types';
-import { DataService } from '../services/dataService';
+import { patientService } from '../services/api/patientService';
+import { staffService } from '../services/api/staffService';
 
 interface TreatmentFormProps {
   treatment?: Treatment;
@@ -24,8 +25,8 @@ const treatmentTypes = [
 ];
 
 export default function TreatmentForm({ treatment, onSave, onCancel }: TreatmentFormProps) {
-  const [patients] = useState<Patient[]>(DataService.getPatients());
-  const [staff] = useState<Staff[]>(DataService.getStaff().filter(s => s.role === 'dentist'));
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [formData, setFormData] = useState<Omit<Treatment, 'patientName' | 'dentistName'>>(
     treatment || {
       id: '',
@@ -42,6 +43,8 @@ export default function TreatmentForm({ treatment, onSave, onCancel }: Treatment
   );
   const [newPrescription, setNewPrescription] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (treatment) {
@@ -51,6 +54,29 @@ export default function TreatmentForm({ treatment, onSave, onCancel }: Treatment
       });
     }
   }, [treatment]);
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [patientsData, staffData] = await Promise.all([
+          patientService.getAll(),
+          staffService.getAll(),
+        ]);
+
+        setPatients(patientsData);
+        setStaff(staffData.filter(s => s.role === 'dentist'));
+      } catch (e) {
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -124,6 +150,11 @@ export default function TreatmentForm({ treatment, onSave, onCancel }: Treatment
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -146,6 +177,7 @@ export default function TreatmentForm({ treatment, onSave, onCancel }: Treatment
                 </select>
               </div>
               {errors.patientId && <p className="mt-1 text-sm text-red-600">{errors.patientId}</p>}
+              {loading && <p className="mt-1 text-xs text-gray-500">Chargement...</p>}
             </div>
 
             <div className="md:col-span-2">
@@ -169,6 +201,7 @@ export default function TreatmentForm({ treatment, onSave, onCancel }: Treatment
                 </select>
               </div>
               {errors.dentistId && <p className="mt-1 text-sm text-red-600">{errors.dentistId}</p>}
+              {loading && <p className="mt-1 text-xs text-gray-500">Chargement...</p>}
             </div>
 
             <div>

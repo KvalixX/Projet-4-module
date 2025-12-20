@@ -10,8 +10,8 @@ import {
   X,
   LogOut
 } from 'lucide-react';
-import { User } from '../types';
-import { DataService } from '../services/dataService';
+import { AdminNotification, User } from '../types';
+import { notificationService } from '../services/api/notificationService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -24,16 +24,23 @@ interface LayoutProps {
 export default function Layout({ children, currentPage, onNavigate, user, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [adminNotifications, setAdminNotifications] = useState<any[]>([]);
+  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
 
   useEffect(() => {
     if (user && (user.role === 'personnelAdministratif' || user.role === 'docteur')) {
-      const notifications = DataService.getAdminNotifications();
-      setAdminNotifications(notifications);
-      
+      const loadNotifications = async () => {
+        try {
+          const notifications = await notificationService.getAdmin();
+          setAdminNotifications(notifications);
+        } catch (e) {
+          setAdminNotifications([]);
+        }
+      };
+
+      loadNotifications();
+
       const interval = setInterval(() => {
-        const updatedNotifications = DataService.getAdminNotifications();
-        setAdminNotifications(updatedNotifications);
+        loadNotifications();
       }, 30000);
 
       return () => clearInterval(interval);
@@ -43,9 +50,16 @@ export default function Layout({ children, currentPage, onNavigate, user, onLogo
   const unreadCount = adminNotifications.filter(n => !n.read).length;
 
   const handleMarkAsRead = (notificationId: string) => {
-    DataService.markAdminNotificationAsRead(notificationId);
-    const updatedNotifications = DataService.getAdminNotifications();
-    setAdminNotifications(updatedNotifications);
+    const markAsRead = async () => {
+      try {
+        await notificationService.markAdminAsRead(notificationId);
+        setAdminNotifications(prev => prev.map(n => (n.id === notificationId ? { ...n, read: true } : n)));
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    markAsRead();
   };
 
   // Définir tous les menus disponibles

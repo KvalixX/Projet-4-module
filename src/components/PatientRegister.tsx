@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Patient } from '../types';
 import { User as UserIcon, Mail, Lock, Eye, EyeOff, Phone, Calendar, MapPin, ArrowLeft } from 'lucide-react';
-import { DataService } from '../services/dataService';
+import { authService } from '../services/api/authService';
 
 interface PatientRegisterProps {
   onRegister: (user: User) => void;
@@ -35,8 +35,6 @@ export default function PatientRegister({ onRegister, onBack }: PatientRegisterP
       newErrors.email = 'L\'email est requis';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email invalide';
-    } else if (DataService.getUserByEmail(formData.email)) {
-      newErrors.email = 'Cet email est déjà utilisé';
     }
     if (!formData.password) {
       newErrors.password = 'Le mot de passe est requis';
@@ -63,8 +61,24 @@ export default function PatientRegister({ onRegister, onBack }: PatientRegisterP
 
     try {
       // Créer le patient
+      const response = await authService.register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.confirmPassword,
+        dateOfBirth: formData.dateOfBirth,
+        phone: formData.phone,
+        address: formData.address,
+      });
+
+      if (!response.success) {
+        setErrors({ submit: 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.' });
+        return;
+      }
+
       const patient: Patient = {
-        id: `patient-${Date.now()}`,
+        id: response.user.patientId || '',
         firstName: formData.firstName,
         lastName: formData.lastName,
         dateOfBirth: formData.dateOfBirth,
@@ -74,44 +88,18 @@ export default function PatientRegister({ onRegister, onBack }: PatientRegisterP
         registrationDate: new Date().toISOString().split('T')[0]
       };
 
-      DataService.savePatient(patient);
-
-      // Créer l'utilisateur
       const user: User = {
-        id: `user-${Date.now()}`,
-        email: formData.email,
-        password: formData.password, // En production, il faudrait hasher le mot de passe
+        id: response.user.id,
+        email: response.user.email,
+        password: '',
         role: 'patient',
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        patientId: patient.id
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        patientId: response.user.patientId,
       };
 
-      DataService.saveUser(user);
-
-      // Notifier le personnel administratif
-      const adminNotification = {
-        id: `admin-notif-${Date.now()}`,
-        type: 'patient_registered' as 'patient_registered',
-        title: 'Nouveau patient inscrit',
-        message: `${formData.firstName} ${formData.lastName} (${formData.email}) s'est inscrit sur la plateforme.`,
-        read: false,
-        createdAt: new Date().toISOString(),
-        patientId: patient.id
-      };
-      DataService.saveAdminNotification(adminNotification);
-
-      // Créer une notification de bienvenue pour le patient
-      const welcomeNotification = {
-        id: `notif-${Date.now()}`,
-        userId: user.id,
-        type: 'system' as 'system',
-        title: 'Bienvenue !',
-        message: 'Votre compte a été créé avec succès. Vous pouvez maintenant prendre des rendez-vous et consulter votre dossier médical.',
-        read: false,
-        createdAt: new Date().toISOString()
-      };
-      DataService.saveNotification(welcomeNotification);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('currentUser', JSON.stringify(user));
 
       onRegister(user);
     } catch (error) {

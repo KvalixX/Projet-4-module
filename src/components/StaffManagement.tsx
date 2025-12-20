@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Mail, Phone, UserCog, Stethoscope, Users as UsersIcon, Edit2, Trash2 } from 'lucide-react';
 import { Staff } from '../types';
-import { DataService } from '../services/dataService';
-import { mockStaff } from '../data/mockData';
+import { staffService } from '../services/api/staffService';
 import StaffForm from './StaffForm';
 
 export default function StaffManagement() {
@@ -13,12 +12,24 @@ export default function StaffManagement() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | undefined>();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (DataService.getStaff().length === 0) {
-      mockStaff.forEach(s => DataService.saveStaff(s));
-    }
-    setStaff(DataService.getStaff());
+    const loadStaff = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await staffService.getAll();
+        setStaff(data);
+      } catch (e) {
+        setError('Erreur lors du chargement du personnel');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStaff();
   }, []);
 
   const filteredStaff = staff.filter((staffMember) => {
@@ -33,13 +44,45 @@ export default function StaffManagement() {
   });
 
   const handleSaveStaff = (staffMember: Staff) => {
-    if (!staffMember.id) {
-      staffMember.id = `staff-${Date.now()}`;
-    }
-    DataService.saveStaff(staffMember);
-    setStaff(DataService.getStaff());
-    setShowForm(false);
-    setSelectedStaff(undefined);
+    const saveStaff = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (selectedStaff?.id) {
+          await staffService.update(selectedStaff.id, {
+            firstName: staffMember.firstName,
+            lastName: staffMember.lastName,
+            role: staffMember.role,
+            specialty: staffMember.specialty,
+            phone: staffMember.phone,
+            email: staffMember.email,
+            schedule: staffMember.schedule,
+          });
+        } else {
+          await staffService.create({
+            firstName: staffMember.firstName,
+            lastName: staffMember.lastName,
+            role: staffMember.role,
+            specialty: staffMember.specialty,
+            phone: staffMember.phone,
+            email: staffMember.email,
+            schedule: staffMember.schedule,
+          });
+        }
+
+        const data = await staffService.getAll();
+        setStaff(data);
+        setShowForm(false);
+        setSelectedStaff(undefined);
+      } catch (e) {
+        setError('Erreur lors de la sauvegarde du personnel');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    saveStaff();
   };
 
   const handleEditStaff = (staffMember: Staff) => {
@@ -49,10 +92,23 @@ export default function StaffManagement() {
 
   const handleDeleteStaff = () => {
     if (!staffToDelete) return;
-    DataService.deleteStaff(staffToDelete);
-    setStaff(DataService.getStaff());
-    setShowDeleteConfirm(false);
-    setStaffToDelete(null);
+    const deleteStaff = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await staffService.delete(staffToDelete);
+        const data = await staffService.getAll();
+        setStaff(data);
+        setShowDeleteConfirm(false);
+        setStaffToDelete(null);
+      } catch (e) {
+        setError('Erreur lors de la suppression du personnel');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    deleteStaff();
   };
 
   const getRoleLabel = (role: string) => {
@@ -113,6 +169,12 @@ export default function StaffManagement() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Gestion du Personnel</h2>
         <p className="text-gray-600">Gérez votre équipe et leurs plannings</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -237,6 +299,11 @@ export default function StaffManagement() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          {loading && (
+            <div className="md:col-span-2 text-center py-6 text-sm text-gray-500">
+              Chargement...
+            </div>
+          )}
           {filteredStaff.map((staff) => (
             <div
               key={staff.id}

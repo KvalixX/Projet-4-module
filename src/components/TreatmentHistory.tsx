@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, FileText, DollarSign, Calendar, Edit2, Trash2 } from 'lucide-react';
 import { Treatment } from '../types';
-import { DataService } from '../services/dataService';
-import { mockTreatments } from '../data/mockData';
+import { treatmentService } from '../services/api/treatmentService';
 import TreatmentForm from './TreatmentForm';
 
 export default function TreatmentHistory() {
@@ -13,12 +12,24 @@ export default function TreatmentHistory() {
   const [showForm, setShowForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [treatmentToDelete, setTreatmentToDelete] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (DataService.getTreatments().length === 0) {
-      mockTreatments.forEach(t => DataService.saveTreatment(t));
-    }
-    setTreatments(DataService.getTreatments());
+    const loadTreatments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await treatmentService.getAll();
+        setTreatments(data);
+      } catch (e) {
+        setError('Erreur lors du chargement des traitements');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTreatments();
   }, []);
 
   const filteredTreatments = treatments.filter(
@@ -32,10 +43,41 @@ export default function TreatmentHistory() {
   const averageCost = treatments.length > 0 ? totalRevenue / treatments.length : 0;
 
   const handleSaveTreatment = (treatment: Treatment) => {
-    DataService.saveTreatment(treatment);
-    setTreatments(DataService.getTreatments());
-    setShowForm(false);
-    setSelectedTreatment(null);
+    const saveTreatment = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const payload = {
+          patientId: treatment.patientId,
+          dentistId: treatment.dentistId,
+          date: treatment.date,
+          type: treatment.type,
+          tooth: treatment.tooth || undefined,
+          description: treatment.description,
+          cost: treatment.cost,
+          prescriptions: treatment.prescriptions || [],
+          nextVisit: treatment.nextVisit || undefined,
+        };
+
+        if (selectedTreatment?.id) {
+          await treatmentService.update(selectedTreatment.id, payload);
+        } else {
+          await treatmentService.create(payload);
+        }
+
+        const data = await treatmentService.getAll();
+        setTreatments(data);
+        setShowForm(false);
+        setSelectedTreatment(null);
+      } catch (e) {
+        setError('Erreur lors de la sauvegarde du traitement');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    saveTreatment();
   };
 
   const handleEditTreatment = (treatment: Treatment) => {
@@ -45,10 +87,23 @@ export default function TreatmentHistory() {
 
   const handleDeleteTreatment = () => {
     if (!treatmentToDelete) return;
-    DataService.deleteTreatment(treatmentToDelete);
-    setTreatments(DataService.getTreatments());
-    setShowDeleteConfirm(false);
-    setTreatmentToDelete(null);
+    const deleteTreatment = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await treatmentService.delete(treatmentToDelete);
+        const data = await treatmentService.getAll();
+        setTreatments(data);
+        setShowDeleteConfirm(false);
+        setTreatmentToDelete(null);
+      } catch (e) {
+        setError('Erreur lors de la suppression du traitement');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    deleteTreatment();
   };
 
   return (
@@ -57,6 +112,12 @@ export default function TreatmentHistory() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Historique des Traitements</h2>
         <p className="text-gray-600">Consultez les traitements réalisés et leur suivi</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -144,6 +205,13 @@ export default function TreatmentHistory() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                    Chargement...
+                  </td>
+                </tr>
+              )}
               {filteredTreatments.map((treatment) => (
                 <tr
                   key={treatment.id}

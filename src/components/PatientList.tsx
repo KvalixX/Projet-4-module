@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Eye, Phone, Mail } from 'lucide-react';
 import { Patient } from '../types';
-import { mockPatients } from '../data/mockData';
-import { DataService } from '../services/dataService';
+import { patientService } from '../services/api/patientService';
 import PatientForm from './PatientForm';
 
 export default function PatientList() {
@@ -13,13 +12,25 @@ export default function PatientList() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Charger les patients depuis le stockage local ou utiliser les données mockées
   useEffect(() => {
-    if (DataService.getPatients().length === 0) {
-      mockPatients.forEach(p => DataService.savePatient(p));
-    }
-    setPatients(DataService.getPatients());
+    const loadPatients = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await patientService.getAll();
+        setPatients(data);
+      } catch (e) {
+        setError('Erreur lors du chargement des patients');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPatients();
   }, []);
 
   const filteredPatients = patients.filter(
@@ -44,25 +55,28 @@ export default function PatientList() {
 
   // Sauvegarde d'un patient (création ou mise à jour)
   const handleSavePatient = (patientData: Omit<Patient, 'id' | 'registrationDate'>) => {
-    if (selectedPatient) {
-      // Mise à jour d'un patient existant
-      const updatedPatient: Patient = {
-        ...patientData,
-        id: selectedPatient.id,
-        registrationDate: selectedPatient.registrationDate
-      };
-      DataService.savePatient(updatedPatient);
-    } else {
-      // Création d'un nouveau patient
-      const newPatient: Patient = {
-        ...patientData,
-        id: `pat-${Date.now()}`,
-        registrationDate: new Date().toISOString().split('T')[0]
-      };
-      DataService.savePatient(newPatient);
-    }
-    setPatients(DataService.getPatients());
-    setShowForm(false);
+    const savePatient = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (selectedPatient) {
+          await patientService.update(selectedPatient.id, patientData);
+        } else {
+          await patientService.create(patientData);
+        }
+
+        const data = await patientService.getAll();
+        setPatients(data);
+        setShowForm(false);
+      } catch (e) {
+        setError('Erreur lors de la sauvegarde du patient');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    savePatient();
   };
 
   // Confirmation de suppression d'un patient
@@ -74,11 +88,24 @@ export default function PatientList() {
   // Suppression d'un patient
   const handleDeletePatient = () => {
     if (!patientToDelete) return;
-    
-    DataService.deletePatient(patientToDelete);
-    setPatients(DataService.getPatients());
-    setShowDeleteConfirm(false);
-    setPatientToDelete(null);
+
+    const deletePatient = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await patientService.delete(patientToDelete);
+        const data = await patientService.getAll();
+        setPatients(data);
+        setShowDeleteConfirm(false);
+        setPatientToDelete(null);
+      } catch (e) {
+        setError('Erreur lors de la suppression du patient');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    deletePatient();
   };
 
   // Formatage de la date au format français
@@ -105,6 +132,12 @@ export default function PatientList() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Gestion des Patients</h2>
         <p className="text-gray-600">Consultez et gérez les dossiers de vos patients</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-4 border-b border-gray-200">
@@ -154,7 +187,13 @@ export default function PatientList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPatients.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    Chargement...
+                  </td>
+                </tr>
+              ) : filteredPatients.length > 0 ? (
                 filteredPatients.map((patient) => (
                   <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -249,7 +288,7 @@ export default function PatientList() {
       {/* Formulaire d'ajout/édition de patient */}
       {showForm && (
         <PatientForm
-          patient={selectedPatient}
+          patient={selectedPatient || undefined}
           onSave={handleSavePatient}
           onCancel={() => setShowForm(false)}
         />

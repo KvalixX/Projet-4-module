@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, UserRole } from '../types';
 import { User as UserIcon, Stethoscope, UserCog, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { DataService } from '../services/dataService';
+import { authService } from '../services/api/authService';
 import PatientRegister from './PatientRegister';
 
 interface LoginProps {
@@ -15,6 +15,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [showRegister, setShowRegister] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const roles: { value: UserRole; label: string; icon: typeof UserIcon; description: string; color: string }[] = [
     {
@@ -61,36 +62,46 @@ export default function Login({ onLogin }: LoginProps) {
       return;
     }
 
-    // Vérifier si c'est un patient qui essaie de se connecter
-    if (selectedRole === 'patient') {
-      const user = DataService.getUserByEmail(email);
-      if (user && user.role === 'patient') {
-        // Vérifier le mot de passe (en production, il faudrait comparer avec un hash)
-        if (user.password === password) {
-          onLogin(user);
-          return;
-        } else {
+    const login = async () => {
+      try {
+        setIsSubmitting(true);
+
+        const response = await authService.login(email, password);
+
+        if (!response.success) {
           setError('Email ou mot de passe incorrect');
           return;
         }
-      } else {
-        setError('Aucun compte trouvé avec cet email. Veuillez créer un compte.');
-        return;
-      }
-    }
 
-    // Pour les docteurs et le personnel administratif, simulation d'authentification
-    const mockUser: User = {
-      id: `user-${Date.now()}`,
-      email,
-      password,
-      role: selectedRole,
-      firstName: selectedRole === 'docteur' ? 'Dr. Karim' : 'Samira',
-      lastName: selectedRole === 'docteur' ? 'Benslimane' : 'Fassi',
-      staffId: selectedRole === 'docteur' ? 's1' : 's4'
+        if (response.user.role !== selectedRole) {
+          setError("Le type d'utilisateur sélectionné ne correspond pas à ce compte");
+          return;
+        }
+
+        const user: User = {
+          id: response.user.id,
+          email: response.user.email,
+          password: '',
+          role: response.user.role as UserRole,
+          firstName: response.user.firstName,
+          lastName: response.user.lastName,
+          patientId: response.user.patientId,
+          staffId: response.user.staffId,
+        };
+
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+
+        onLogin(user);
+      } catch (err: any) {
+        const message = err?.response?.data?.message;
+        setError(message || 'Email ou mot de passe incorrect');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
-    onLogin(mockUser);
+    login();
   };
 
   const handleRegister = (user: User) => {
@@ -224,9 +235,10 @@ export default function Login({ onLogin }: LoginProps) {
 
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
                   >
-                    Se connecter
+                    {isSubmitting ? 'Connexion...' : 'Se connecter'}
                   </button>
 
                   {selectedRole === 'patient' && (
