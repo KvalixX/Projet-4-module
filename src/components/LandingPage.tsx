@@ -1,515 +1,238 @@
-'use client';
-
-import type { LucideIcon } from 'lucide-react';
-import {
-  Brain,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
-  HeartPulse,
-  Mail,
-  MapPin,
-  MessageSquare,
-  Phone,
-  RefreshCcw,
-  ScanLine,
-  ShieldCheck,
-  SmilePlus,
-  Sparkles,
-  Star,
-  Stethoscope,
-  Timer
-} from 'lucide-react';
-import heroImage from '../../img/implant-dentaire-casablanca-jnane-californie-by-dr-salhi-badr-casablanca-.webp';
+import { Stethoscope, Shield, Clock, Phone, ChevronRight, Menu, X, Users, MessageSquare, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 
 interface LandingPageProps {
-  onEnter: () => void;
+    onEnter: () => void;
 }
 
-type FeatureCard = {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  tag?: string;
-};
-
-const features: FeatureCard[] = [
-  {
-    title: 'Gestion des patients',
-    description: 'Dossiers complets, historiques de soins et documents centralisés.',
-    icon: ClipboardList,
-    tag: 'Workflow'
-  },
-  {
-    title: 'Agenda intelligent',
-    description: 'Planification assistée avec rappels automatisés pour limiter les absences.',
-    icon: CalendarDays,
-    tag: 'Opérations'
-  },
-  {
-    title: 'Suivi clinique',
-    description: 'Visualisation claire des plans de soins, radios, prescriptions et consentements.',
-    icon: HeartPulse,
-    tag: 'Clinique'
-  },
-  {
-    title: 'Sécurité & conformité',
-    description: 'Chiffrement, accès granulaire et audit trail certifiés RGPD.',
-    icon: ShieldCheck,
-    tag: 'Sécurité'
-  }
-];
-
-const careHighlights: FeatureCard[] = [
-  {
-    title: 'Plateforme connectée',
-    description: 'Portail patient & pro pour documents, paiements et messages sécurisés.',
-    icon: Sparkles
-  },
-  {
-    title: 'Équipe pluridisciplinaire',
-    description: 'Orthodontistes, implantologues, omnipraticiens et hygiénistes dédiés.',
-    icon: Stethoscope
-  },
-  {
-    title: 'Suivi proactif',
-    description: 'Scores de risque, rappels santé et coaching d’hygiène sur-mesure.',
-    icon: MessageSquare
-  }
-];
-
-const technologyStacks = [
-  {
-    title: 'Imagerie & diagnostics',
-    description: 'Scanner 3D, radiologie cone beam, photographie calibrée et IA descriptive.',
-    icon: ScanLine,
-    items: ['CBCT 3D', 'Smile design numérique', 'Simulation AR']
-  },
-  {
-    title: 'Fabrication numérique',
-    description: 'Flux CFAO intégré, impressions chairside et aligners invisibles personnalisés.',
-    icon: RefreshCcw,
-    items: ['CFAO chairside', 'Guides chirurgicaux', 'Aligneurs premium']
-  },
-  {
-    title: 'Pilotage data-driven',
-    description: 'Tableaux de bord en temps réel sur la satisfaction, la production et la prévention.',
-    icon: Brain,
-    items: ['KPI en direct', 'Alertes qualité', 'Benchmark national']
-  }
-];
-
-const workflowSteps = [
-  {
-    title: 'Diagnostic digital',
-    description: 'Bilan photo, scanner 3D et questionnaire santé automatisé.',
-    icon: ScanLine,
-    metric: '45 min'
-  },
-  {
-    title: 'Plan de traitement collaboratif',
-    description: 'Visualisations 3D partagées et consentements digitaux en temps réel.',
-    icon: SmilePlus,
-    metric: 'J+2'
-  },
-  {
-    title: 'Suivi immersif',
-    description: 'Notifications, télésuivi et échanges sécurisés avec l’équipe.',
-    icon: MessageSquare,
-    metric: '100% en ligne'
-  },
-  {
-    title: 'Optimisation continue',
-    description: 'Revues trimestrielles et coaching personnalisé selon vos objectifs.',
-    icon: Timer,
-    metric: '4x / an'
-  }
-];
-
-const faqs = [
-  {
-    question: 'Comment se déroule la première visite ?',
-    answer:
-      'Un coordinateur vous accompagne pour le bilan photo, l’analyse 3D et la création de votre espace sécurisé. Vous repartez avec un pré-diagnostic complet.'
-  },
-  {
-    question: 'Puis-je accéder à mes documents en ligne ?',
-    answer:
-      'Oui, comptes-rendus, radios, devis et factures sont disponibles 24/7 dans votre portail, avec notifications dès qu’un nouvel élément est publié.'
-  },
-  {
-    question: 'Proposez-vous des facilités de paiement ?',
-    answer:
-      'Nous mettons à disposition des plans de règlement flexibles et des partenariats bancaires pour les traitements longue durée.'
-  }
-];
-
-const partners = ['Align Technology', '3Shape', 'Straumann', 'Philips Zoom', 'Carestream Dental'];
-
-const stats = [
-  { label: 'Patients suivis', value: '3 500+' },
-  { label: 'Professionnels', value: '12' },
-  { label: 'Années d\'expérience', value: '15' }
-];
-
-const contactInfos = [
-  {
-    label: 'Adresse',
-    value: '25 Rue des Capucines, 75002 Paris',
-    icon: MapPin
-  },
-  {
-    label: 'Téléphone',
-    value: '01 86 95 24 30',
-    icon: Phone
-  },
-  {
-    label: 'Email',
-    value: 'contact@cabinet-horizon.fr',
-    icon: Mail
-  }
-];
-
 export default function LandingPage({ onEnter }: LandingPageProps) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 font-sans">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur sticky top-0 z-20 border-b border-blue-100">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-lg">
-              CH
-            </div>
-            <div>
-              <p className="font-semibold text-lg">Cabinet Horizon</p>
-              <p className="text-xs text-gray-500">Excellence dentaire</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex gap-8 text-sm font-medium">
-            <a href="#services" className="hover:text-blue-600 transition-colors">Services</a>
-            <a href="#approche" className="hover:text-blue-600 transition-colors">Approche</a>
-            <a href="#contact" className="hover:text-blue-600 transition-colors">Contact</a>
-          </div>
-          <button
-            onClick={onEnter}
-            className="px-6 py-2.5 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-lg"
-          >
-            Accéder
-          </button>
-        </div>
-      </header>
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-      <main>
-        {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-6 py-20 lg:py-32">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">
-                  Cabinet dentaire nouvelle génération
-                </p>
-                <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-gray-900">
-                  Des soins d'excellence, amplifiés par la technologie.
-                </h1>
-              </div>
-              
-              <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
-                Nous combinons expertise médicale, protocoles de prévention avancés et plateforme numérique sécurisée pour offrir une expérience patient incomparable.
-              </p>
+    const services = [
+        {
+            title: "Soins Préventifs",
+            description: "Nettoyage, examens et conseils pour maintenir une hygiène bucco-dentaire parfaite.",
+            icon: Shield,
+            color: "bg-blue-50 text-blue-600"
+        },
+        {
+            title: "Chirurgie Dentaire",
+            description: "Interventions spécialisées avec les dernières technologies pour votre confort.",
+            icon: Stethoscope,
+            color: "bg-green-50 text-green-600"
+        },
+        {
+            title: "Urgences 24/7",
+            description: "Une équipe dédiée pour traiter vos douleurs et urgences dentaires sans attendre.",
+            icon: Clock,
+            color: "bg-purple-50 text-purple-600"
+        }
+    ];
 
-              <div className="flex flex-wrap gap-4">
-                <button
-                  onClick={onEnter}
-                  className="px-8 py-4 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
-                >
-                  Prendre rendez-vous
-                </button>
-                <a
-                  href="#services"
-                  className="px-8 py-4 rounded-full border-2 border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition-colors"
-                >
-                  En savoir plus
-                </a>
-              </div>
+    return (
+        <div className="min-h-screen bg-white">
+            {/* Navigation */}
+            <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between h-16 items-center">
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                                <Stethoscope className="text-white" size={24} />
+                            </div>
+                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-800">
+                                DentalCare
+                            </span>
+                        </div>
 
-              {/* Stats */}
-              <div className="pt-8 grid grid-cols-3 gap-6">
-                {stats.map((stat) => (
-                  <div key={stat.label}>
-                    <p className="text-3xl font-bold text-blue-600">{stat.value}</p>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                        {/* Desktop Nav */}
+                        <div className="hidden md:flex items-center gap-8">
+                            <a href="#services" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Services</a>
+                            <a href="#about" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">À Propos</a>
+                            <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Contact</a>
+                            <button
+                                onClick={onEnter}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                            >
+                                Se connecter
+                            </button>
+                        </div>
 
-            {/* Visual Right */}
-            <div className="relative">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-400/20 via-transparent to-transparent blur-3xl" />
-              <div className="relative rounded-3xl border border-blue-200 overflow-hidden shadow-xl">
-                <img
-                  src={heroImage}
-                  alt="Innovation dentaire Cabinet Horizon"
-                  className="w-full h-full object-cover aspect-square"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6 bg-white/85 backdrop-blur rounded-2xl p-6 shadow-lg">
-                  <p className="text-xs uppercase tracking-[0.3em] text-blue-500 font-semibold">Technologies</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">Imagerie 3D & CFAO</p>
-                  <p className="text-sm text-gray-600 mt-1">Lasers dentaires, aligners invisibles, diagnostics assistés.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Trusted Partners */}
-        <section className="border-y border-blue-100 bg-blue-50/70">
-          <div className="max-w-7xl mx-auto px-6 py-10 flex flex-wrap items-center justify-center gap-8 text-xs uppercase tracking-[0.3em] text-gray-500">
-            {partners.map((partner) => (
-              <span key={partner} className="font-semibold text-center opacity-80">
-                {partner}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="services" className="bg-green-50 py-20 lg:py-28">
-          <div className="max-w-7xl mx-auto px-6 space-y-12">
-            <div className="space-y-4 max-w-2xl">
-              <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">Nos expertises</p>
-              <h2 className="text-4xl lg:text-5xl font-bold">Un cabinet pluridisciplinaire</h2>
-              <p className="text-lg text-gray-600">
-                De l'orthodontie à l'implantologie, nos spécialistes conçoivent des plans de traitement intégrés.
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="group bg-white rounded-3xl border border-gray-200 p-8 hover:-translate-y-1 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300"
-                >
-                  {feature.tag && (
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 mb-6">
-                      {feature.tag}
-                    </span>
-                  )}
-                  <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mb-6">
-                    <feature.icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {careHighlights.map((highlight) => (
-                <div key={highlight.title} className="bg-white rounded-3xl border border-gray-200 p-6 flex gap-4 shadow-sm">
-                  <div className="h-12 w-12 rounded-2xl bg-green-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                    <highlight.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold">{highlight.title}</p>
-                    <p className="text-sm text-gray-600 leading-relaxed">{highlight.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Approach Section */}
-        <section id="approche" className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">Notre approche</p>
-                <h2 className="text-4xl lg:text-5xl font-bold">Humain + Digital</h2>
-              </div>
-              
-              <p className="text-lg text-gray-600 leading-relaxed">
-                Nous combinons expertise médicale, protocoles de prévention et outils numériques pour offrir une expérience fluide, de la première consultation jusqu'au suivi long terme.
-              </p>
-
-              <ul className="space-y-4 text-gray-600">
-                {[
-                  'Parcours patient totalement digitalisé',
-                  'Communication proactive entre équipes',
-                  'Sécurisation RGPD des données médicales'
-                ].map((item) => (
-                  <li key={item} className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Testimonial */}
-            <div className="bg-white rounded-3xl border border-gray-200 p-10 space-y-6 shadow-xl">
-              <div className="flex gap-1 text-blue-500">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <Star key={index} className="h-5 w-5 fill-blue-500 text-blue-500" />
-                ))}
-              </div>
-              <blockquote className="text-2xl font-bold leading-relaxed">
-                « Enfin un cabinet où l'on se sent accompagné. Les rappels automatiques, les comptes-rendus et la disponibilité de l'équipe changent tout. »
-              </blockquote>
-              <div>
-                <p className="font-semibold">Chloé Martel</p>
-                <p className="text-sm text-gray-500">Patiente Invisalign</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section id="contact" className="bg-blue-600 text-white py-20 lg:py-28">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <p className="text-xs tracking-widest uppercase font-semibold opacity-90">Contact</p>
-                  <h2 className="text-4xl lg:text-5xl font-bold">Prêt à nous rejoindre ?</h2>
-                </div>
-                <p className="text-lg opacity-90 leading-relaxed">
-                  Accédez à notre plateforme sécurisée pour suivre vos dossiers, planifier vos rendez-vous et rester en contact avec notre équipe.
-                </p>
-                <div className="space-y-3 text-sm">
-                  {contactInfos.map((info) => (
-                    <div key={info.label} className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-white/15 flex items-center justify-center">
-                        <info.icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide opacity-70">{info.label}</p>
-                        <p className="font-medium">{info.value}</p>
-                      </div>
+                        {/* Mobile menu button */}
+                        <div className="md:hidden">
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 p-2">
+                                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                            </button>
+                        </div>
                     </div>
-                  ))}
                 </div>
-              </div>
 
-              <div className="bg-white/10 backdrop-blur rounded-3xl border border-white/20 p-10 space-y-6">
-                <div>
-                  <p className="font-semibold text-lg">Espace patient & professionnel</p>
-                  <p className="text-sm opacity-80">Accès sécurisé à votre plateforme</p>
-                </div>
-                <button
-                  onClick={onEnter}
-                  className="w-full py-4 rounded-full bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors"
-                >
-                  Se connecter
-                </button>
-                <p className="text-xs opacity-75">
-                  Accès réservé aux patients et professionnels du cabinet.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Technology Section */}
-        <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
-          <div className="space-y-4 max-w-3xl">
-            <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">Technologie & innovation</p>
-            <h2 className="text-4xl lg:text-5xl font-bold">Des protocoles guidés par la data</h2>
-            <p className="text-lg text-gray-600">
-              Nos équipes s'appuient sur une stack numérique dernier cri pour apporter précision, confort et transparence à chaque étape.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-8 mt-12">
-            {technologyStacks.map((tech) => (
-              <div
-                key={tech.title}
-                className="rounded-3xl border border-gray-200 bg-gradient-to-br from-white via-blue-50 to-green-50 p-8 flex flex-col gap-6 shadow-lg"
-              >
-                <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                  <tech.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">{tech.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{tech.description}</p>
-                </div>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  {tech.items.map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Workflow Section */}
-        <section className="bg-green-50 py-20 lg:py-28">
-          <div className="max-w-7xl mx-auto px-6 space-y-12">
-            <div className="space-y-4 max-w-2xl">
-              <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">Parcours patient</p>
-              <h2 className="text-4xl lg:text-5xl font-bold">Un accompagnement en 4 temps forts</h2>
-              <p className="text-lg text-gray-600">
-                Chaque étape est orchestrée par une équipe dédiée, avec un coach patient pour maintenir le lien entre vos visites.
-              </p>
-            </div>
-
-            <div className="grid lg:grid-cols-4 gap-6">
-              {workflowSteps.map((step, index) => (
-                <div
-                  key={step.title}
-                  className="relative rounded-3xl border border-gray-200 bg-white p-6 flex flex-col gap-4 shadow-sm"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                      <step.icon className="h-5 w-5" />
+                {/* Mobile Nav */}
+                {isMenuOpen && (
+                    <div className="md:hidden bg-white border-b border-gray-100 p-4 space-y-4">
+                        <a href="#services" className="block text-gray-600 hover:text-blue-600 font-medium py-2">Services</a>
+                        <a href="#about" className="block text-gray-600 hover:text-blue-600 font-medium py-2">À Propos</a>
+                        <a href="#contact" className="block text-gray-600 hover:text-blue-600 font-medium py-2">Contact</a>
+                        <button
+                            onClick={onEnter}
+                            className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all"
+                        >
+                            Se connecter
+                        </button>
                     </div>
-                    <span className="text-sm font-semibold text-gray-500">0{index + 1}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-blue-600 font-semibold">{step.metric}</p>
-                    <h3 className="text-xl font-bold mt-2 mb-2">{step.title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
-                  </div>
+                )}
+            </nav>
+
+            {/* Hero Section */}
+            <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
+                {/* Background blobs */}
+                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[450px] h-[450px] bg-blue-50 rounded-full blur-3xl opacity-50 -z-10" />
+                <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[350px] h-[350px] bg-green-50 rounded-full blur-3xl opacity-50 -z-10" />
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                        <div className="space-y-6 text-center lg:text-left">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold animate-fade-in">
+                                <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+                                Cabinet Dentaire Moderne
+                            </div>
+                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                                Retrouvez votre plus <br />
+                                <span className="text-blue-600">beau sourire</span>
+                            </h1>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0">
+                                Une équipe d'experts passionnés et des technologies de pointe pour prendre soin de votre santé bucco-dentaire au quotidien.
+                            </p>
+                        </div>
+
+                        <div className="relative hidden lg:block">
+                            <div className="relative z-10 w-full h-[450px] bg-gradient-to-br from-blue-100 to-blue-50 rounded-3xl overflow-hidden shadow-2xl">
+                                <img
+                                    src="/img/implant-dentaire-casablanca-jnane-californie-by-dr-salhi-badr-casablanca-.webp"
+                                    alt="Cabinet Dentaire"
+                                    className="w-full h-full object-cover"
+                                />
+                                {/* Overlaying Info Cards */}
+                                <div className="absolute top-10 right-10 bg-white p-4 rounded-2xl shadow-xl animate-bounce-slow">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                            <Shield className="text-green-600" size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm text-gray-900">Sûr & Certifié</div>
+                                            <div className="text-xs text-gray-500">Normes ISO 2024</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-10 left-10 bg-white p-4 rounded-2xl shadow-xl animate-float">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <Users className="text-blue-600" size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm text-gray-900">Experts Qualifiés</div>
+                                            <div className="text-xs text-gray-500">Équipe senior</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Decorative circle */}
+                            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-2xl"></div>
+                        </div>
+                    </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
+            </section >
 
-        {/* FAQ Section */}
-        <section className="max-w-5xl mx-auto px-6 py-20 lg:py-28">
-          <div className="space-y-4">
-            <p className="text-xs tracking-widest uppercase font-semibold text-blue-600">Questions fréquentes</p>
-            <h2 className="text-4xl font-bold">Tout savoir avant de commencer</h2>
-          </div>
+            {/* Services Section */}
+            < section id="services" className="py-24 bg-gray-50/50" >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+                        <h2 className="text-blue-600 font-bold uppercase tracking-wider">Nos Services</h2>
+                        <h3 className="text-4xl font-bold text-gray-900">Une approche complète de la santé dentaire</h3>
+                        <p className="text-gray-600 text-lg">Nous utilisons les dernières avancées médicales pour vous offrir des soins de qualité supérieure dans un environnement serein.</p>
+                    </div>
 
-          <div className="mt-10 space-y-6">
-            {faqs.map((faq) => (
-              <div key={faq.question} className="rounded-3xl border border-blue-100 p-6 bg-white shadow-sm">
-                <p className="text-lg font-semibold mb-2">{faq.question}</p>
-                <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </main>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {services.map((service, index) => (
+                            <div
+                                key={index}
+                                className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group"
+                            >
+                                <div className={`w-14 h-14 ${service.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                                    <service.icon size={28} />
+                                </div>
+                                <h4 className="text-xl font-bold text-gray-900 mb-4">{service.title}</h4>
+                                <p className="text-gray-600 leading-relaxed mb-6">{service.description}</p>
+                                <a href="#" className="flex items-center gap-2 text-blue-600 font-semibold group-hover:gap-3 transition-all">
+                                    En savoir plus <ChevronRight size={18} />
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section >
 
-      {/* Footer */}
-      <footer className="border-t border-blue-100 bg-green-50/80 py-8">
-        <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600">
-          <p>© {new Date().getFullYear()} Cabinet Dentaire Horizon. Tous droits réservés.</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-900 transition-colors">Mentions légales</a>
-            <a href="#" className="hover:text-gray-900 transition-colors">Politique de confidentialité</a>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+            {/* Footer */}
+            < footer className="bg-gray-900 text-white py-16" >
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-4 gap-12">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                                    <Stethoscope className="text-white" size={24} />
+                                </div>
+                                <span className="text-xl font-bold">DentalCare</span>
+                            </div>
+                            <p className="text-gray-400">Votre partenaire santé pour un sourire éclatant et durable.</p>
+                        </div>
+                        <div>
+                            <h5 className="font-bold mb-6">Liens Rapides</h5>
+                            <ul className="space-y-4 text-gray-400">
+                                <li><a href="#" className="hover:text-blue-400">Accueil</a></li>
+                                <li><a href="#" className="hover:text-blue-400">Nos Experts</a></li>
+                                <li><a href="#" className="hover:text-blue-400">Témoignages</a></li>
+                                <li><a href="#" className="hover:text-blue-400">Blog</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 className="font-bold mb-6">Horaires</h5>
+                            <ul className="space-y-4 text-gray-400">
+                                <li>Lun - Ven: 9h00 - 19h00</li>
+                                <li>Samedi: 9h00 - 13h00</li>
+                                <li>Dimanche: Fermé</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 className="font-bold mb-6">Contact</h5>
+                            <ul className="space-y-4 text-gray-400">
+                                <li className="flex items-center gap-2"><Phone size={16} /> 01 23 45 67 89</li>
+                                <li className="flex items-center gap-2"><MessageSquare size={16} /> contact@dentalcare.fr</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500 text-sm">
+                        © 2024 DentalCare. Tous droits réservés.
+                    </div>
+                </div>
+            </footer >
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
+        .animate-fade-in { animation: fadeIn 1s ease-out; }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      ` }} />
+        </div >
+    );
 }
