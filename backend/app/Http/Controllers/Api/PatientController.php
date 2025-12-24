@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -27,14 +29,14 @@ class PatientController extends Controller
                     'id' => $patient->id,
                     'firstName' => $patient->first_name,
                     'lastName' => $patient->last_name,
-                    'dateOfBirth' => $patient->date_of_birth->format('Y-m-d'),
+                    'dateOfBirth' => \Carbon\Carbon::parse($patient->date_of_birth)->format('Y-m-d'),
                     'phone' => $patient->phone,
                     'email' => $patient->email,
                     'address' => $patient->address,
                     'bloodType' => $patient->blood_type,
                     'allergies' => $patient->allergies,
                     'medicalHistory' => $patient->medical_history,
-                    'registrationDate' => $patient->registration_date->format('Y-m-d H:i:s'),
+                    'registrationDate' => \Carbon\Carbon::parse($patient->registration_date)->format('Y-m-d H:i:s'),
                 ];
             })
         ]);
@@ -65,6 +67,10 @@ class PatientController extends Controller
         }
 
         try {
+            // Générer le mot de passe : Nom + Prénom + PP
+            $generatedPassword = $request->lastName . $request->firstName . 'PP';
+            $hashedPassword = Hash::make($generatedPassword);
+
             $patient = Patient::create([
                 'id' => Str::uuid(),
                 'first_name' => $request->firstName,
@@ -79,6 +85,17 @@ class PatientController extends Controller
                 'registration_date' => now(),
             ]);
 
+            // Créer le compte utilisateur pour le patient
+            User::create([
+                'id' => Str::uuid(),
+                'email' => $request->email,
+                'password' => $hashedPassword,
+                'role' => 'patient',
+                'first_name' => $request->firstName,
+                'last_name' => $request->lastName,
+                'patient_id' => $patient->id,
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Patient créé avec succès',
@@ -86,14 +103,15 @@ class PatientController extends Controller
                     'id' => $patient->id,
                     'firstName' => $patient->first_name,
                     'lastName' => $patient->last_name,
-                    'dateOfBirth' => $patient->date_of_birth->format('Y-m-d'),
+                    'dateOfBirth' => \Carbon\Carbon::parse($patient->date_of_birth)->format('Y-m-d'),
                     'phone' => $patient->phone,
                     'email' => $patient->email,
                     'address' => $patient->address,
                     'bloodType' => $patient->blood_type,
                     'allergies' => $patient->allergies,
                     'medicalHistory' => $patient->medical_history,
-                    'registrationDate' => $patient->registration_date->format('Y-m-d H:i:s'),
+                    'registrationDate' => \Carbon\Carbon::parse($patient->registration_date)->format('Y-m-d H:i:s'),
+                    'generatedPassword' => $generatedPassword, // Retourner le mot de passe pour info
                 ]
             ], 201);
         } catch (\Exception $e) {
@@ -125,14 +143,14 @@ class PatientController extends Controller
                 'id' => $patient->id,
                 'firstName' => $patient->first_name,
                 'lastName' => $patient->last_name,
-                'dateOfBirth' => $patient->date_of_birth->format('Y-m-d'),
+                'dateOfBirth' => \Carbon\Carbon::parse($patient->date_of_birth)->format('Y-m-d'),
                 'phone' => $patient->phone,
                 'email' => $patient->email,
                 'address' => $patient->address,
                 'bloodType' => $patient->blood_type,
                 'allergies' => $patient->allergies,
                 'medicalHistory' => $patient->medical_history,
-                'registrationDate' => $patient->registration_date->format('Y-m-d H:i:s'),
+                'registrationDate' => \Carbon\Carbon::parse($patient->registration_date)->format('Y-m-d H:i:s'),
                 'appointments' => $patient->appointments,
                 'treatments' => $patient->treatments,
                 'reminders' => $patient->reminders,
@@ -193,14 +211,14 @@ class PatientController extends Controller
                     'id' => $patient->id,
                     'firstName' => $patient->first_name,
                     'lastName' => $patient->last_name,
-                    'dateOfBirth' => $patient->date_of_birth->format('Y-m-d'),
+                    'dateOfBirth' => \Carbon\Carbon::parse($patient->date_of_birth)->format('Y-m-d'),
                     'phone' => $patient->phone,
                     'email' => $patient->email,
                     'address' => $patient->address,
                     'bloodType' => $patient->blood_type,
                     'allergies' => $patient->allergies,
                     'medicalHistory' => $patient->medical_history,
-                    'registrationDate' => $patient->registration_date->format('Y-m-d H:i:s'),
+                    'registrationDate' => \Carbon\Carbon::parse($patient->registration_date)->format('Y-m-d H:i:s'),
                 ]
             ]);
         } catch (\Exception $e) {

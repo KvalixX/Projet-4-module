@@ -10,6 +10,7 @@ export interface Patient {
   allergies?: string[];
   medicalHistory?: string;
   registrationDate: string;
+  generatedPassword?: string;
 }
 
 export interface Appointment {

@@ -47,9 +47,10 @@ Route::middleware('auth:api')->group(function () {
     // Treatments
     Route::apiResource('treatments', TreatmentController::class);
 
-    // Staff - Seulement pour admin (personnelAdministratif)
+    // Staff - Liste accessible pour tout le monde (pour les rendez-vous), mais gestion seulement pour admin
+    Route::get('staff', [StaffController::class, 'index']);
     Route::middleware('role:personnelAdministratif')->group(function () {
-        Route::apiResource('staff', StaffController::class);
+        Route::apiResource('staff', StaffController::class)->except(['index']);
     });
 
     // Dashboard

@@ -14,6 +14,9 @@ export default function PatientList() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [newPatientEmail, setNewPatientEmail] = useState('');
 
   // Charger les patients depuis le stockage local ou utiliser les données mockées
   useEffect(() => {
@@ -63,7 +66,12 @@ export default function PatientList() {
         if (selectedPatient) {
           await patientService.update(selectedPatient.id, patientData);
         } else {
-          await patientService.create(patientData);
+          const newPatient = await patientService.create(patientData);
+          if (newPatient.generatedPassword) {
+            setGeneratedPassword(newPatient.generatedPassword);
+            setNewPatientEmail(newPatient.email);
+            setShowSuccessModal(true);
+          }
         }
 
         const data = await patientService.getAll();
@@ -152,7 +160,7 @@ export default function PatientList() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button 
+            <button
               onClick={handleAddPatient}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors"
             >
@@ -234,9 +242,8 @@ export default function PatientList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        patient.bloodType ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${patient.bloodType ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {patient.bloodType || 'Non renseigné'}
                       </span>
                     </td>
@@ -425,6 +432,52 @@ export default function PatientList() {
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modale de succès avec mot de passe généré */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 text-center shadow-2xl transform transition-all">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="text-green-600" size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Patient créé avec succès !</h3>
+            <p className="text-gray-600 mb-6">
+              Un compte a été automatiquement créé pour ce patient. Voici ses identifiants de connexion :
+            </p>
+
+            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6">
+              <div className="mb-4">
+                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Identifiant (Email)</p>
+                <p className="text-lg font-mono text-blue-600 font-bold break-all">
+                  {newPatientEmail}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Mot de passe temporaire</p>
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-2xl font-mono text-gray-900 font-bold tracking-tight">
+                    {generatedPassword}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg flex items-start gap-3 mb-6 text-left">
+              <Eye className="shrink-0 mt-0.5" size={16} />
+              <p>Veuillez communiquer ces identifiants au patient. Il pourra les utiliser pour accéder à son espace personnel.</p>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                setGeneratedPassword('');
+              }}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+            >
+              Compris
+            </button>
           </div>
         </div>
       )}

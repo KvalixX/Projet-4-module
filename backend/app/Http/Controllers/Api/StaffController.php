@@ -18,22 +18,35 @@ class StaffController extends Controller
      */
     public function index(): JsonResponse
     {
+        $user = auth()->user();
         $staff = Staff::orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'success' => true,
-            'data' => $staff->map(function ($member) {
-                return [
+            'data' => $staff->filter(function ($member) use ($user) {
+                // Si c'est un patient, il ne voit que les dentistes
+                if ($user->role === 'patient') {
+                    return $member->role === 'dentist';
+                }
+                return true;
+            })->map(function ($member) use ($user) {
+                $data = [
                     'id' => $member->id,
                     'firstName' => $member->first_name,
                     'lastName' => $member->last_name,
                     'role' => $member->role,
                     'specialty' => $member->specialty,
-                    'phone' => $member->phone,
-                    'email' => $member->email,
-                    'schedule' => $member->schedule,
                 ];
-            })
+
+                // Seuls les admins et docteurs voient les contacts et plannings
+                if ($user->role === 'personnelAdministratif' || $user->role === 'docteur') {
+                    $data['phone'] = $member->phone;
+                    $data['email'] = $member->email;
+                    $data['schedule'] = $member->schedule;
+                }
+
+                return $data;
+            })->values()
         ]);
     }
 
