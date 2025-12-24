@@ -42,10 +42,10 @@ function App() {
     localStorage.removeItem('currentUser');
   };
 
-  // Rediriger le personnel administratif s'il essaie d'accéder à des pages non autorisées
+  // Rediriger les docteurs s'ils essaient d'accéder à la gestion du personnel
   // IMPORTANT: Tous les Hooks doivent être appelés avant tout return conditionnel
   useEffect(() => {
-    if (currentUser && currentUser.role === 'personnelAdministratif' && (currentPage === 'treatments' || currentPage === 'staff')) {
+    if (currentUser && currentUser.role === 'docteur' && currentPage === 'staff') {
       setCurrentPage('dashboard');
     }
   }, [currentUser, currentPage]);
@@ -64,12 +64,13 @@ function App() {
   }
 
   // Pour les docteurs et le personnel administratif, afficher l'interface complète
-  // Le personnel administratif a accès à :
+  // L'administrateur (personnelAdministratif) a accès à TOUT :
   // - Gestion des patients (patients)
   // - Gestion des rendez-vous (appointments)
-  // - Notifications/Rappels (reminders)
-  // Le personnel administratif N'A PAS accès à :
   // - Traitements (treatments)
+  // - Personnel (staff)
+  // - Notifications/Rappels (reminders)
+  // Les docteurs ont accès à tout SAUF :
   // - Personnel (staff)
 
   const renderPage = () => {
@@ -81,14 +82,10 @@ function App() {
       case 'appointments':
         return <AppointmentCalendar />;
       case 'treatments':
-        // Seuls les docteurs peuvent accéder aux traitements
-        if (currentUser.role === 'personnelAdministratif') {
-          return <Dashboard />;
-        }
         return <TreatmentHistory />;
       case 'staff':
-        // Seuls les docteurs peuvent accéder à la gestion du personnel
-        if (currentUser.role === 'personnelAdministratif') {
+        // Seuls les admins peuvent accéder à la gestion du personnel
+        if (currentUser.role === 'docteur') {
           return <Dashboard />;
         }
         return <StaffManagement />;

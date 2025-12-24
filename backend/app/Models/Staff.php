@@ -20,7 +20,12 @@ class Staff extends Model
         'specialty',
         'phone',
         'email',
+        'password',
         'schedule',
+    ];
+
+    protected $hidden = [
+        'password',
     ];
 
     protected $casts = [

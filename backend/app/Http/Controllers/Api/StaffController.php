@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Staff;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -58,6 +60,14 @@ class StaffController extends Controller
         }
 
         try {
+            // Générer automatiquement le mot de passe pour les dentistes
+            $password = null;
+            $generatedPassword = null;
+            if ($request->role === 'dentist') {
+                $generatedPassword = $request->lastName . $request->firstName . '@@';
+                $password = Hash::make($generatedPassword);
+            }
+
             $staff = Staff::create([
                 'id' => Str::uuid(),
                 'first_name' => $request->firstName,
@@ -66,10 +76,30 @@ class StaffController extends Controller
                 'specialty' => $request->specialty,
                 'phone' => $request->phone,
                 'email' => $request->email,
+                'password' => $password,
                 'schedule' => $request->schedule,
             ]);
 
-            return response()->json([
+            // Créer un utilisateur pour le dentiste ou l'admin pour permettre la connexion
+            if ($request->role === 'dentist' || $request->role === 'admin') {
+                $userRole = ($request->role === 'dentist') ? 'docteur' : 'personnelAdministratif';
+
+                // Si c'est un dentiste, on utilise le mot de passe généré, 
+                // sinon on met un mot de passe par défaut que l'admin devra changer
+                $initialPassword = $password ?? Hash::make('Cabinet123@@');
+
+                User::create([
+                    'id' => Str::uuid(),
+                    'email' => $request->email,
+                    'password' => $initialPassword,
+                    'role' => $userRole,
+                    'first_name' => $request->firstName,
+                    'last_name' => $request->lastName,
+                    'staff_id' => $staff->id,
+                ]);
+            }
+
+            $response = [
                 'success' => true,
                 'message' => 'Membre du personnel créé avec succès',
                 'data' => [
@@ -82,7 +112,14 @@ class StaffController extends Controller
                     'email' => $staff->email,
                     'schedule' => $staff->schedule,
                 ]
-            ], 201);
+            ];
+
+            // Ajouter le mot de passe généré dans la réponse (uniquement pour les dentistes)
+            if ($generatedPassword) {
+                $response['data']['generatedPassword'] = $generatedPassword;
+            }
+
+            return response()->json($response, 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

@@ -29,7 +29,7 @@ Route::prefix('auth')->group(function () {
 
 // Routes protégées (avec authentification JWT)
 Route::middleware('auth:api')->group(function () {
-    
+
     // Auth
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -39,27 +39,29 @@ Route::middleware('auth:api')->group(function () {
 
     // Patients
     Route::apiResource('patients', PatientController::class);
-    
+
     // Appointments
     Route::apiResource('appointments', AppointmentController::class);
     Route::post('/appointments/check-conflicts', [AppointmentController::class, 'checkConflicts']);
-    
+
     // Treatments
     Route::apiResource('treatments', TreatmentController::class);
-    
-    // Staff
-    Route::apiResource('staff', StaffController::class);
-    
+
+    // Staff - Seulement pour admin (personnelAdministratif)
+    Route::middleware('role:personnelAdministratif')->group(function () {
+        Route::apiResource('staff', StaffController::class);
+    });
+
     // Dashboard
     Route::prefix('dashboard')->group(function () {
         Route::get('/stats', [DashboardController::class, 'stats']);
         Route::get('/upcoming-appointments', [DashboardController::class, 'upcomingAppointments']);
         Route::get('/pending-reminders', [DashboardController::class, 'pendingReminders']);
     });
-    
+
     // Reminders
     Route::apiResource('reminders', ReminderController::class);
-    
+
     // Notifications
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);

@@ -75,17 +75,17 @@ export default function Layout({ children, currentPage, onNavigate, user, onLogo
   // Filtrer les menus selon le rôle de l'utilisateur
   const getMenuItems = () => {
     if (!user) return [];
-    
-    // Personnel administratif : accès à patients, rendez-vous, rappels (mais PAS traitements ni personnel)
+
+    // Personnel administratif (admin) : accès complet à TOUT
     if (user.role === 'personnelAdministratif') {
-      return allMenuItems.filter(item => item.id !== 'treatments' && item.id !== 'staff');
-    }
-    
-    // Docteur : accès complet à tous les menus
-    if (user.role === 'docteur') {
       return allMenuItems;
     }
-    
+
+    // Docteur : accès à tout SAUF la gestion du personnel
+    if (user.role === 'docteur') {
+      return allMenuItems.filter(item => item.id !== 'staff');
+    }
+
     // Par défaut, retourner tous les menus
     return allMenuItems;
   };
@@ -146,9 +146,8 @@ export default function Layout({ children, currentPage, onNavigate, user, onLogo
                             {adminNotifications.slice(0, 10).map((notification) => (
                               <div
                                 key={notification.id}
-                                className={`p-3 rounded-lg mb-2 cursor-pointer ${
-                                  notification.read ? 'bg-gray-50' : 'bg-blue-50'
-                                }`}
+                                className={`p-3 rounded-lg mb-2 cursor-pointer ${notification.read ? 'bg-gray-50' : 'bg-blue-50'
+                                  }`}
                                 onClick={() => {
                                   if (!notification.read) {
                                     handleMarkAsRead(notification.id);
@@ -209,9 +208,8 @@ export default function Layout({ children, currentPage, onNavigate, user, onLogo
 
       <div className="flex pt-16">
         <aside
-          className={`${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out pt-16 lg:pt-0`}
+          className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out pt-16 lg:pt-0`}
         >
           <nav className="mt-5 px-3 space-y-1">
             {menuItems.map((item) => {
@@ -224,11 +222,10 @@ export default function Layout({ children, currentPage, onNavigate, user, onLogo
                     onNavigate(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
+                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
                       ? 'bg-blue-50 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <Icon size={20} className="mr-3" />
                   {item.label}

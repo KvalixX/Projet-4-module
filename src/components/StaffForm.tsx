@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save, User, Phone, Mail, Calendar } from 'lucide-react';
+import { X, Save, User, Phone, Mail } from 'lucide-react';
 import { Staff } from '../types';
 
 interface StaffFormProps {
@@ -52,7 +52,7 @@ export default function StaffForm({ staff, onSave, onCancel }: StaffFormProps) {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
     if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
     if (!formData.phone.trim()) newErrors.phone = 'Le téléphone est requis';
@@ -61,7 +61,7 @@ export default function StaffForm({ staff, onSave, onCancel }: StaffFormProps) {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email invalide';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -99,14 +99,14 @@ export default function StaffForm({ staff, onSave, onCancel }: StaffFormProps) {
           <h3 className="text-lg font-semibold">
             {staff ? 'Modifier le membre du personnel' : 'Nouveau membre du personnel'}
           </h3>
-          <button 
+          <button
             onClick={onCancel}
             className="text-gray-500 hover:text-gray-700"
           >
             <X size={20} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -180,6 +180,17 @@ export default function StaffForm({ staff, onSave, onCancel }: StaffFormProps) {
               </div>
             )}
 
+            {!staff && formData.role === 'dentist' && (
+              <div className="md:col-span-2">
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                  <p className="text-sm text-blue-700 flex items-center gap-2">
+                    <Mail size={16} />
+                    <span>Un mot de passe sera généré automatiquement : <strong>{formData.lastName}{formData.firstName}@@</strong></span>
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Téléphone <span className="text-red-500">*</span>
@@ -226,11 +237,10 @@ export default function StaffForm({ staff, onSave, onCancel }: StaffFormProps) {
                     key={day}
                     type="button"
                     onClick={() => toggleScheduleDay(day)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      formData.schedule?.includes(day)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${formData.schedule?.includes(day)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     {day}
                   </button>

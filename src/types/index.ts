@@ -50,6 +50,7 @@ export interface Staff {
   phone: string;
   email: string;
   schedule?: string[];
+  generatedPassword?: string;
 }
 
 export interface Reminder {

@@ -14,6 +14,7 @@ export default function StaffManagement() {
   const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     const loadStaff = async () => {
@@ -69,6 +70,10 @@ export default function StaffManagement() {
             email: staffMember.email,
             schedule: staffMember.schedule,
           });
+
+          if (staffMember.role === 'dentist') {
+            setShowSuccessModal(true);
+          }
         }
 
         const data = await staffService.getAll();
@@ -242,7 +247,7 @@ export default function StaffManagement() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button 
+            <button
               onClick={() => {
                 setSelectedStaff(undefined);
                 setShowForm(true);
@@ -257,41 +262,37 @@ export default function StaffManagement() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterRole('all')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filterRole === 'all'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1 rounded-full text-sm ${filterRole === 'all'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               Tous
             </button>
             <button
               onClick={() => setFilterRole('dentist')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filterRole === 'dentist'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1 rounded-full text-sm ${filterRole === 'dentist'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               Dentistes
             </button>
             <button
               onClick={() => setFilterRole('assistant')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filterRole === 'assistant'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1 rounded-full text-sm ${filterRole === 'assistant'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               Assistants
             </button>
             <button
               onClick={() => setFilterRole('receptionist')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filterRole === 'receptionist'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1 rounded-full text-sm ${filterRole === 'receptionist'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               Réceptionnistes
             </button>
@@ -436,6 +437,26 @@ export default function StaffManagement() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de succès */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 text-center">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 transform transition-all animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Stethoscope className="text-green-600 w-10 h-10" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Félicitations !</h3>
+            <p className="text-gray-600 mb-8">
+              Le dentiste a été créé avec <span className="text-green-600 font-semibold">succès</span>.
+            </p>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-lg shadow-blue-200"
+            >
+              Génial, merci !
+            </button>
           </div>
         </div>
       )}
